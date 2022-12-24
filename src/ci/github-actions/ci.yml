@@ -73,7 +73,7 @@ x--expand-yaml-anchors--remove:
     env: {}
 
   - &job-linux-xl
-    os: ubuntu-20.04-xl
+    os: ubuntu-latest
     <<: *base-job
 
   - &job-macos-xl
@@ -285,21 +285,24 @@ jobs:
     <<: *base-ci-job
     name: PR
     env:
+      RUST_BACKTRACE: 1
+      RUST_CONFIGURE_ARGS: --set llvm.download-ci-llvm=if-available
+
       <<: [*shared-ci-variables, *public-variables]
     if: github.event_name == 'pull_request'
+    continue-on-error: ${{ matrix.tidy }}
     strategy:
       matrix:
         include:
-          - name: mingw-check
+          - name: mingw-check-tidy
             <<: *job-linux-xl
+            tidy: true
 
           - name: x86_64-gnu-llvm-13
             <<: *job-linux-xl
+            tidy: false
 
-          - name: x86_64-gnu-tools
-            env:
-              CI_ONLY_WHEN_SUBMODULES_CHANGED: 1
-            <<: *job-linux-xl
+        
 
   auto:
     permissions:
@@ -467,7 +470,7 @@ jobs:
           - name: dist-x86_64-apple
             env:
               SCRIPT: ./x.py dist bootstrap --include-default-paths --host=x86_64-apple-darwin --target=x86_64-apple-darwin
-              RUST_CONFIGURE_ARGS: --enable-full-tools --enable-sanitizers --enable-profiler --set rust.jemalloc --set llvm.ninja=false
+              RUST_CONFIGURE_ARGS: --enable-full-tools --enable-sanitizers --enable-profiler --set rust.jemalloc --set llvm.ninja=false --set rust.lto=thin
               RUSTC_RETRY_LINKER_ON_SEGFAULT: 1
               MACOSX_DEPLOYMENT_TARGET: 10.7
               SELECT_XCODE: /Applications/Xcode_13.4.1.app
